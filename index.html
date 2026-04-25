@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Weather Pro Fixed</title>
+
+<style>
+:root {
+  --bg: rgba(0,0,0,0.6);
+  --text: white;
+}
+
+.light {
+  --bg: rgba(255,255,255,0.6);
+  --text: black;
+}
+
+body {
+  margin: 0;
+  font-family: Arial;
+  color: var(--text);
+  overflow: hidden;
+}
+
+video {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+.container {
+  backdrop-filter: blur(20px);
+  background: var(--bg);
+  padding: 20px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 420px;
+  margin: auto;
+  margin-top: 5%;
+  text-align: center;
+}
+
+button {
+  margin-top: 10px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.temp {
+  font-size: 50px;
+}
+
+.forecast {
+  display: flex;
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+.card {
+  min-width: 80px;
+  margin: 5px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.2);
+}
+</style>
+</head>
+
+<body>
+
+<video autoplay muted loop>
+  <source src="https://cdn.coverr.co/videos/coverr-clouds-over-mountains-1575/1080p.mp4">
+</video>
+
+<div class="container">
+  <h2 id="location">📍 Loading...</h2>
+  <div class="temp" id="temp">--</div>
+  <div id="desc"></div>
+  <div id="extra"></div>
+
+  <button onclick="toggleTheme()">🌙 Toggle Mode</button>
+
+  <div class="forecast" id="forecast"></div>
+</div>
+
+<script>
+const apiKey = "2a35c3a1ffff08068944830dd8483b19";
+
+// THEME
+function toggleTheme() {
+  document.body.classList.toggle("light");
+}
+
+// LOCATION GET
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(success, error);
+} else {
+  fallback();
+}
+
+function success(pos) {
+  getWeather(pos.coords.latitude, pos.coords.longitude);
+}
+
+function error() {
+  console.log("Location blocked, using fallback");
+  fallback();
+}
+
+// FALLBACK (Sihora Jabalpur)
+function fallback() {
+  getWeather(23.487, 80.105);
+}
+
+// WEATHER
+async function getWeather(lat, lon) {
+  try {
+    // CURRENT
+    let res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+    let data = await res.json();
+
+    if (data.cod !== 200) throw new Error();
+
+    document.getElementById("location").innerText = "📍 " + data.name;
+    document.getElementById("temp").innerText = Math.round(data.main.temp) + "°C";
+    document.getElementById("desc").innerText = data.weather[0].description;
+
+    document.getElementById("extra").innerHTML =
+      "Feels: " + Math.round(data.main.feels_like) + "°C<br>" +
+      "Humidity: " + data.main.humidity + "%<br>" +
+      "Wind: " + data.wind.speed + " m/s";
+
+    // FORECAST
+    let res2 = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+    let data2 = await res2.json();
+
+    let forecastHTML = "";
+
+    for (let i = 0; i < data2.list.length; i += 8) {
+      let day = data2.list[i];
+      let date = new Date(day.dt_txt).toLocaleDateString("en-IN", { weekday: "short" });
+
+      forecastHTML += `
+        <div class="card">
+          <div>${date}</div>
+          <div>${Math.round(day.main.temp)}°C</div>
+        </div>
+      `;
+    }
+
+    document.getElementById("forecast").innerHTML = forecastHTML;
+
+  } catch (err) {
+    document.getElementById("location").innerText = "Error ❌";
+    document.getElementById("temp").innerText = "--";
+  }
+}
+</script>
+
+</body>
+</html>
